@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13-alpine
+    container_name: ads-postgres
+    environment:
+      POSTGRES_DB: ads
+      POSTGRES_USER: ads_user
+      POSTGRES_PASSWORD: ads_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ads-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ads_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: ads-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ads
+      SPRING_DATASOURCE_USERNAME: ads_user
+      SPRING_DATASOURCE_PASSWORD: ads_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    networks:
+      - ads-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  ads-network:
+    driver: bridge
