@@ -3,6 +3,7 @@ package ru.skypro.homework.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,26 +28,6 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Configuration
 @RequiredArgsConstructor
 public class WebSecurityConfig {
-
-    /**
-     * Список URL, доступных без аутентификации.
-     * Включает эндпоинты Swagger, OpenAPI, публичные API и ресурсы.
-     */
-    private static final String[] AUTH_WHITELIST = {
-            "/swagger-resources/**",
-            "/swagger-ui.html",
-            "/swagger-ui/**",
-            "/v3/api-docs",
-            "/v3/api-docs/**",
-            "/webjars/**",
-            "/login",
-            "/register",
-            "/ads",
-            "/ads/*",
-            "/ads/*/image",
-            "/ads/*/comments",
-            "/users/*/image"
-    };
 
     /**
      * Создает сервис для загрузки данных пользователей из базы данных.
@@ -82,8 +63,21 @@ public class WebSecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests(authorization ->
                         authorization
-                                .mvcMatchers(AUTH_WHITELIST).permitAll()
-                                .mvcMatchers("/ads/**", "/users/**").authenticated())
+                                // Swagger и документация
+                                .antMatchers("/swagger-resources/**",
+                                        "/swagger-ui.html",
+                                        "/swagger-ui/**",
+                                        "/v3/api-docs",
+                                        "/v3/api-docs/**",
+                                        "/webjars/**").permitAll()
+                                // Аутентификация и регистрация
+                                .antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
+                                // Публичные GET-запросы
+                                .antMatchers(HttpMethod.GET, "/ads").permitAll()
+                                .antMatchers(HttpMethod.GET, "/ads/*/image").permitAll()
+                                .antMatchers(HttpMethod.GET, "/users/*/image").permitAll()
+                                // Все остальные запросы требуют аутентификации
+                                .anyRequest().authenticated())
                 .httpBasic(withDefaults());
         return http.build();
     }
